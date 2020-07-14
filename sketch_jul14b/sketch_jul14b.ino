@@ -1,5 +1,4 @@
 /********************************/
-// include the library code
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 /**********************************************************/
@@ -16,37 +15,57 @@ static const uint8_t pD8   = 15;
 static const uint8_t pD9   = 3;
 static const uint8_t pD10  = 1;
 
+const int tonePin = D3;
+
 int lcdChars = 16;
 int lcdLines = 1;
-int tim = 250;
+int delayTime = 250;
 
-int soundBuzzer = false;
 // initialize the library with the numbers of the interface pins
 LiquidCrystal_I2C lcd(0x27, lcdChars, lcdLines); // set the LCD address to 0x27 for a 16 chars and 1 line display
 /*********************************************************/
 void setup()
 {
+  pinMode(pD3, OUTPUT);
   Wire.begin(pD2, pD1); 
   lcd.init();// initializing the LCD
   lcd.backlight(); // Enable or Turn On the backlight 
   lcd.home();
- 
 }
 /*********************************************************/
 void loop() 
 {
+  noTone(tonePin);
+  alertState();
+  noAlertState();
+  delay(5000);
+}
+
+void noAlertState()
+{
+  digitalWrite(pD3 ,HIGH);
+  lcd.noBacklight();
+}
+
+void alertState(){
+  bool soundState = false;
+  int messageLength = 36;
+  lcd.on();
+  lcd.backlight();
   lcd.home(); // set the cursor to home
   lcd.print("                LIMPIEZA SOLICITADA!"); //print message
-  for (int i = 0; i < 36; i++)
+  for (int i = 0; i < messageLength; i++)
   {
-    if(soundBuzzer){
-      tone(pD3, 3000, 500);
+    if(soundState){
+      digitalWrite(pD3 ,LOW);
+    } else {
+      digitalWrite(pD3 ,HIGH);
     }
-    lcd.scrollDisplayLeft();
-    //Scrolls the contents of the display one space to the left.// Print a message to the LCD.
-    delay(tim); //wait for 250 microseconds
-    soundBuzzer = !soundBuzzer;
+    soundState = !soundState;
+    lcd.scrollDisplayLeft(); //Scrolls the contents of the display one space to the left.
+    delay(delayTime);//wait for 250 microseconds
   }
-  lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left  corner.
+  lcd.clear();
 }
+
 /************************************************************/
