@@ -7,11 +7,10 @@
 #define WIFI_SSID "Guri's AirPort Express"
 #define WIFI_PASSWORD "guriguri"
 #define TOKEN "45SKm5WY4RQIsmqVE72P"
-#define CLIENT_ID "eb4989b0-c606-11ea-bf35-41d006a14e9a"
+#define CLIENT_NAME "ESP8266 limpieza"
 
 char* thingsboardServer = "demo.thingsboard.io";
 char* requestTopic = "v1/devices/me/rpc/request/+";
-char* telemetryTopic = "v1/devices/me/telemetry";
 
 LiquidCrystal_I2C lcd(0x27, 16, 1);
 WiFiClient wifiClient;
@@ -28,12 +27,11 @@ int ledStatus = LOW;
 void setup() {
   Serial.begin(9600);
   initializeDisplay();
-  initializeWifi();
-  client.setServer(thingsboardServer, 1883);
-  client.setCallback(on_message);
   initializePins();
   digitalWrite(buzzerPin, HIGH);
-  alertState();
+  client.setServer(thingsboardServer, 1883);
+  client.setCallback(on_message);
+  reconnect();
 }
 
 void loop() {
@@ -45,16 +43,6 @@ void loop() {
 
 void noAlertState()
 {
-//  String payload = "{";
-//    payload += "\"alertStatus\":"; 
-//    payload += false; 
-//    payload += "}";
-//  char attributes[100];
-//  payload.toCharArray(attributes, 100);
-//  if (client.publish(telemetryTopic, attributes) == true) {
-//    Serial.println("Publicado ok");
-//  }
-//  Serial.println(attributes);
   digitalWrite(buzzerPin, HIGH);
   lcd.clear();
   lcd.noBacklight();
@@ -96,20 +84,24 @@ bool isButtonPressed() {
 }
 
 void on_message(const char* topic, byte* payload, unsigned int length) {
-  char json[length + 1];
-  strncpy (json, (char*) payload, length);
-  json[length] = '\0';
-  Serial.print("Message: ");
-  Serial.println(json);
+  Serial.print("llega");
+//   StaticJsonDocument<256> doc;
+//   deserializeJson(doc, payload);
+//   String message = doc["message"];
+   alertState();
+//   Serial.print(message);
 }
 
 void reconnect() {
    while (!client.connected()) {
     initializeWifi();
-    if (client.connect(CLIENT_ID, TOKEN, NULL)) {
+    Serial.print("Connecting to ThingsBoard node ...");
+    if (client.connect(CLIENT_NAME, TOKEN, NULL)) {
+      Serial.println( "[DONE]" );
       client.subscribe(requestTopic);
-      client.subscribe(telemetryTopic);
     } else {
+      Serial.print("[FAILED]");
+      Serial.println(" retrying in 5 seconds..." );
       delay(5000);
     }
   }
@@ -125,6 +117,7 @@ void initializeWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+    Serial.print(".");
   }
 }
 
