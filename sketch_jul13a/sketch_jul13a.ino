@@ -7,7 +7,7 @@
 #define WIFI_SSID "Guri's AirPort Express"
 #define WIFI_PASSWORD "guriguri"
 #define TOKEN "45SKm5WY4RQIsmqVE72P"
-#define CLIENT_NAME "ESP8266 limpieza"
+#define CLIENT_NAME "eb4989b0-c606-11ea-bf35-41d006a14e9a"
 
 char* thingsboardServer = "demo.thingsboard.io";
 char* requestTopic = "v1/devices/me/rpc/request/+";
@@ -29,14 +29,15 @@ void setup() {
   initializeDisplay();
   initializePins();
   digitalWrite(buzzerPin, HIGH);
+  connectToWiFi();
   client.setServer(thingsboardServer, 1883);
+  reconnect_wifi();
   client.setCallback(on_message);
-  reconnect();
 }
 
 void loop() {
   if (!client.connected()) {
-    reconnect();
+    reconnect_wifi();
   }
   client.loop();
 }
@@ -85,23 +86,29 @@ bool isButtonPressed() {
 
 void on_message(const char* topic, byte* payload, unsigned int length) {
   Serial.print("llega");
-//   StaticJsonDocument<256> doc;
-//   deserializeJson(doc, payload);
-//   String message = doc["message"];
-   alertState();
-//   Serial.print(message);
+  StaticJsonDocument<256> doc;
+  deserializeJson(doc, payload);
+  String message = doc["message"]; 
+  if (message.equals("alertState")) {
+    alertState();
+  }
 }
 
-void reconnect() {
-   while (!client.connected()) {
-    initializeWifi();
-    Serial.print("Connecting to ThingsBoard node ...");
+void reconnect_wifi() {
+  int statusWifi = WL_IDLE_STATUS;
+  while (!client.connected()) {
+    statusWifi = WiFi.status();
+    connectToWiFi();
+    Serial.print("Connecting to ThingsBoard node... ");
     if (client.connect(CLIENT_NAME, TOKEN, NULL)) {
-      Serial.println( "[DONE]" );
-      client.subscribe(requestTopic);
+      Serial.println("[DONE]");
+      client.subscribe(requestTopic); 
+      Serial.println("Subscribed to request's topic, awaiting messages...");
     } else {
-      Serial.print("[FAILED]");
-      Serial.println(" retrying in 5 seconds..." );
+      Serial.print("[FAILED] [ rc = ");
+      Serial.print(client.state());
+      Serial.println("");
+      Serial.println(" : retrying in 5 seconds]");
       delay(5000);
     }
   }
@@ -113,11 +120,15 @@ void initializePins() {
   pinMode(buzzerPin, OUTPUT);
 }
 
-void initializeWifi() {
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+void connectToWiFi() {
+  if (WiFi.status() != WL_CONNECTED){
+    Serial.print("Connecting to WiFi ...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println("Connected to WiFi");
   }
 }
 
